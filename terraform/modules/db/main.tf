@@ -35,7 +35,9 @@ resource "yandex_compute_instance" "db" {
     }
   }
 
-
+  scheduling_policy {
+    preemptible = true
+  }
   network_interface {
     subnet_id = var.subnet_id
     nat       = true

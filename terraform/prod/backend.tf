@@ -7,12 +7,10 @@ terraform {
     bucket     = "terr-state-file"
     region     = "ru-central1"
     key        = "prod/terraform.tfstate"
-    access_key = "YCAJE7V_ryhfk-9EKPyrG1mVi"
-    secret_key = "YCOx3MIZOU48_GD3wC1JwSTaP_xI-8i_HcuTNXHD"
+    access_key = "YCsdvszdfsdfvsvfdsvmVi"
+    secret_key = "YSDVSDVsdadfsdfvfD"
 
     skip_region_validation      = true
     skip_credentials_validation = true
   }
 }
-
-

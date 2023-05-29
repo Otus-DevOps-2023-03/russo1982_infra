@@ -40,6 +40,10 @@ resource "yandex_compute_instance" "app" {
     nat       = true
   }
 
+  scheduling_policy {
+    preemptible = true
+  }
+
   metadata = {
     ssh-keys = "ubuntu:${file(var.public_key_path)}"
     /*  user-data = <<-EOF
@@ -68,5 +72,3 @@ resource "yandex_compute_instance" "app" {
     private_key = file(var.private_key_path)
   }
 }
-
-
