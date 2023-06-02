@@ -47,7 +47,8 @@ resource "yandex_compute_instance" "db" {
   metadata = {
     ssh-keys = "ubuntu:${file(var.public_key_path)}"
   }
-
+}
+/*
   connection {
     type  = "ssh"
     host  = self.network_interface.0.nat_ip_address
@@ -60,5 +61,4 @@ resource "yandex_compute_instance" "db" {
   provisioner "remote-exec" {
     script = "${path.module}/mongodb.sh"
   }
-
-}
+*/

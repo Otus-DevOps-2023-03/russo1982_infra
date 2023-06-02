@@ -52,7 +52,8 @@ resource "yandex_compute_instance" "app" {
                   EOF
                   */
   }
-
+}
+/*
   provisioner "file" {
     ## source = "${path.module}/puma.service"
     content     = templatefile("${path.module}/puma.service", { database_url = "${var.db_ip}" })
@@ -71,4 +72,4 @@ resource "yandex_compute_instance" "app" {
     # путь до приватного ключа
     private_key = file(var.private_key_path)
   }
-}
+*/

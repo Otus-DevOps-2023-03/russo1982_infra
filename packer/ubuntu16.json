@@ -2,17 +2,16 @@
     "builders": [
         {
             "type": "yandex",
-            "service_account_key_file": "./image-puller_srv-accnt_key.json",
-            "folder_id": "b1ghj2aqa2mlhsqvhmpe",
+            "service_account_key_file": "image-puller_srv-accnt_key.json",
+            "folder_id": "b1ghj2aq",
             "source_image_family": "ubuntu-1604-lts",
             "image_name": "reddit-base-{{timestamp}}",
             "image_family": "reddit-base",
             "ssh_username": "ubuntu",
             "platform_id": "standard-v1",
-	        "use_ipv4_nat": "true"
+            "use_ipv4_nat": "true"
         }
     ],
-
     "provisioners": [
         {
             "type": "shell",

@@ -2,24 +2,23 @@
     "builders": [
         {
             "type": "yandex",
-            "service_account_key_file": "{{ user `key`}}",
-            "folder_id": "{{ user `folder_id`}}",
-            "source_image_id": "{{ user `src_img_id`}}",
-            "source_image_family": "{{ user `src_img_fam`}}",
-            "image_name": "reddit-full-{{timestamp}}",
-            "image_family": "{{ user `image_name`}}",
-            "ssh_username": "{{ user `ssh_usr`}}",
-            "subnet_id": "{{ user `subnet_id`}}",
-            "zone": "{{ user `zone1`}}",
-            "platform_id": "standard-v1",            
-	        "use_ipv4_nat": "true"
+            "service_account_key_file": "{{ user `key` }}",
+            "folder_id": "{{ user `folder_id` }}",
+            "source_image_id": "{{ user `src_img_id` }}",
+            "source_image_family": "{{ user `src_img_fam` }}",
+            "image_name": "reddit-mongodb-{{timestamp}}",
+            "image_family": "{{ user `image_name` }}",
+            "ssh_username": "{{ user `ssh_usr` }}",
+            "subnet_id": "{{ user `subnet_id` }}",
+            "zone": "{{ user `zone1` }}",
+            "platform_id": "standard-v1",
+            "use_ipv4_nat": "true"
         }
     ],
-
     "provisioners": [
         {
-            "type":"shell",
-            "inline":[
+            "type": "shell",
+            "inline": [
                 "sleep 200",
                 "sudo apt update && sudo apt -y -q upgrade"
             ]
