@@ -7,8 +7,8 @@ terraform {
     bucket     = "terr-state-file"
     region     = "ru-central1"
     key        = "stage/terraform.tfstate"
-    access_key = "YCsdvsdvvvVi"
-    secret_key = "YCOavravvD"
+    access_key = "YCAJE"
+    secret_key = "YCOx3MI"
 
     skip_region_validation      = true
     skip_credentials_validation = true

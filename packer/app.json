@@ -2,22 +2,23 @@
     "builders": [
         {
             "type": "yandex",
-            "service_account_key_file": "./image-puller_srv-accnt_key.json",
-            "folder_id": "b1ghj2aqa2mlhsqvhmpe",
-            "source_image_id": "fd8euj6lnuj728jk1o7q",
-            "source_image_family": "ubuntu-1604-lts",
-            "image_name": "reddit-base-ruby-{{timestamp}}",
-            "image_family": "reddit-base",
-            "ssh_username": "ubuntu",
+            "service_account_key_file": "{{ user `key` }}",
+            "folder_id": "{{ user `folder_id` }}",
+            "source_image_id": "{{ user `src_img_id` }}",
+            "source_image_family": "{{ user `src_img_fam` }}",
+            "image_name": "reddit-ruby-{{timestamp}}",
+            "image_family": "{{ user `image_name` }}",
+            "ssh_username": "{{ user `ssh_usr` }}",
+            "subnet_id": "{{ user `subnet_id` }}",
+            "zone": "{{ user `zone1` }}",
             "platform_id": "standard-v1",
             "use_ipv4_nat": "true"
         }
     ],
     "provisioners": [
         {
-            "type": "shell",
-            "script": "./scripts/install_ruby.sh",
-            "execute_command": "sudo {{.Path}}"
+            "type": "ansible",
+            "playbook_file": "../ansible/playbooks/packer_app.yml"
         }
     ]
 }

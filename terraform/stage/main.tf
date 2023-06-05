@@ -70,6 +70,33 @@ resource "local_file" "app_inventory" {
 
 EOF
 }
+resource "yandex_vpc_security_group" "web-server" {
+  name        = "HTTPD security group"
+  description = "Security group to route the trafic into web server"
+  network_id  = module.vpc.app-network
+
+  ingress {
+    protocol       = "TCP"
+    description    = "HTTP trafic"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 80
+  }
+
+  ingress {
+    protocol       = "TCP"
+    description    = "SSH trafic"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 22
+  }
+
+  egress {
+    protocol       = "ANY"
+    description    = "Allow any outoing traffic"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    from_port      = -1
+    to_port        = -1
+  }
+}
 
 /*
 resource "yandex_storage_bucket" "s3-bucket" {

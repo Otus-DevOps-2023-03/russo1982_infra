@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout this repo
-      uses: actions/checkout@v2
-      with:
-        ref: ${{ github.ref }}
-    - name: Checkout repo with tests
-      uses: actions/checkout@v2
-      with:
-        repository: "express42/otus-homeworks"
-        ref: 2023-03
-        path: "./otus-homeworks/"
+      - name: Checkout this repo
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref }}
+      - name: Checkout repo with tests
+        uses: actions/checkout@v2
+        with:
+          repository: "express42/otus-homeworks"
+          ref: 2023-03
+          path: "./otus-homeworks/"
 
-    - name: Run tests
-      run: curl https://raw.githubusercontent.com/express42/otus-homeworks/2023-03/run.sh | bash
+      - name: Run tests
+        run: curl https://raw.githubusercontent.com/express42/otus-homeworks/2023-03/run.sh | bash

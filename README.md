@@ -1,344 +1,456 @@
 # russo1982_infra
 ---
-## ДЗ №10 Ansible (Знакомство с Ansible. Работа с веткой ansible-1)
+## ДЗ №12 Ansible (Ansible: работа с ролями и окружениями. Работа с веткой ansible-3)
 
-Создаю новуб ветку **ansible-1** для выполнения данного ДЗ
+### Создание ролей
+Создаю директорию **roles** и запуще в ней команды для создания заготовки ролей для конфигурации приложения и БД
 ```bash
-git branch ansible-1
-git switch ansible-1
+ansible-galaxy init app
+- Role app was created successfully
+ansible-galaxy init db
+- Role db was created successfully
 ```
-Далее установлю **python 2.7**. В системе уже есть **python 3**
+В результате создаются папки **app** и **db** с одниковым контентом
 ```bash
-➜  ~ python3
-Python 3.10.6 (main, Mar 10 2023, 10:55:28) [GCC 11.3.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
->>>
-➜  ~ which python3
-/usr/bin/python3
-➜  ~
-```
-но, для выполнения задач необходим именно **python 2.7**. Его и установлю на основе этого **https://linuxconfig.org/install-python-2-on-ubuntu-22-04-jammy-jellyfish-linux**
-
-```bash
-sudo apt update
-sudo apt install python2
-python2 -V
-  Python 2.7.18
-```
-
-А пакетный менеджер **pip** ранее уже был установлен
-```bash
-pip --version
-  pip 22.0.2 from /usr/lib/python3/dist-packages/pip (python 3.10)
+tree app
+app
+├── defaults
+│   └── main.yml
+├── files
+├── handlers
+│   └── main.yml
+├── meta
+│   └── main.yml
+├── README.md
+├── tasks
+│   └── main.yml
+├── templates
+├── tests
+│   ├── inventory
+│   └── test.yml
+└── vars
+    └── main.yml
 ```
 
-Создайм в корне инфраструктурного репозитория директорию **ansible** . Вся дальнейшая работа с Ansible будет производится в ней
-Созадаю файл **requirements.txt** и после устанавливаю **ansible**
 ```bash
-echo "ansible>=2.4" > requirements.txt
-cat requirements.txt
-  ansible>=2.4
+tree db
+db
+├── defaults
+│   └── main.yml
+├── files
+├── handlers
+│   └── main.yml
+├── meta
+│   └── main.yml
+├── README.md
+├── tasks
+│   └── main.yml
+├── templates
+├── tests
+│   ├── inventory
+│   └── test.yml
+└── vars
+    └── main.yml
+```
 
-pip install -r requirements.txt
-  Successfully installed ansible-7.5.0 ansible-core-2.14.5 jinja2-3.1.2 packaging-23.1 resolvelib-0.8.1
+### Роль для базы данных
 
-ansible --version
-  ansible [core 2.14.5]
-    config file = None
-    configured module search path = ['/home/std/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
-    ansible python module location = /home/std/.local/lib/python3.10/site-packages/ansible
-    ansible collection location = /home/std/.ansible/collections:/usr/share/ansible/collections
-    executable location = /home/std/.local/bin/ansible
-    python version = 3.10.6 (main, Mar 10 2023, 10:55:28) [GCC 11.3.0] (/usr/bin/python3)
-    jinja version = 3.1.2
-    libyaml = True
-  ```
-Меня тут, конечно, смущает, что указана версия **python version = 3.10.6** но, если далее будет проблемы смогу поменять настройки в **ansible**
+Теперь для роли конфигурации MongoDB скопирую секцию **tasks** в сценарии плейбука **ansible/db.yml** и вставлю ее в файл в директории **tasks** роли **db**
+**ansible/roles/db/tasks/main.yml**
+```bash
+---
+# tasks file for db
+- name: Change mongo config file
+  template:
+    src: mongod_conf.j2
+    dest: /etc/mongod.conf
+    mode: 0644
+  notify: restart mongod
+```
+Далее в директорию шаблоннов роли **ansble/roles/db/templates** скопирую шаблонизированный конфиг для **MongoDB** из директории **ansible/templates**. Модули **template** и **copy**, которые используются в тасках роли, будут по умолчанию проверять наличие шаблонов и файлов в директориях роли **templates** и **files** соответственно. Поэтому достаточно указать в таске только имя шаблона в качестве источника.
+
+Точно по такой же логике оформляем **handlers**
+Содержимое файла **ansble/roles/db/handlers/main.yml**
+```bash
+---
+# handlers file for db
+- name: restart mongod
+  service: name=mongod state=restarted
+```
+Также в папку **defaults** перенесем нужные переменные
+**ansble/roles/db/defaults/main.yml**
+```bash
+---
+# defaults file for db
+mongo_port: 27017
+mongo_bind_ip: 0.0.0.0
+```
+
+Точно такой же подход будем реализовать для роли **app**.
+Скопирую секцию **tasks** в сценарии плейбука **ansible/app.yml** и вставлю ее в файл для тасков роли **app**.
+
+### Использую роли в созданных ранее плейбуках
+
+Удалю определение тасков и хендлеров в плейбуках **ansible/app.yml** и **ansible/db.yml** заменив на вызов роли
+```bash
+---
+- name: Configure App
+  hosts: app
+  # tags: app-tag
+  become: true
+
+  vars:
+    db_host: 192.168.10.24
+
+  roles:
+    - app
+```
+
+```bash
+---
+- name: Configure MongoDB
+  hosts: db
+  # tags: db-tag
+  become: true
+  vars:
+    mongo_bind_ip: 0.0.0.0
+
+  roles:
+    - db
+```
+
+Теперь пересоздам инстансы и запущу плебуки.
+```bash
+terraform destroy
+terraform apply
+ansible-playbook site.yml --check
+ansible-palybook site.yml
+```
+Перед проверкой изменить внешние IP адреса инстансов в инвентори файле **ansible/inventory** и переменную **db_host** в плейбуке **app.yml**
+
+Инстансы поднялись и плейбук сработал штатно. Всё норм!
 
 ---
 
-### Запуск VMs
+## Управление окружением через Ansible
 
-1. Создаю инстансы описанные в **stage**?, но с установкой **Python >=2.7**
-```bash
-sudo apt-get install -y python
-```
-Тут следует напумнить, что образы мы испоьзуем те, которые создал Packer
+Для управление окружениями **prod** и **stage** Создам директорию **environments** в директории **ansible** для определения настроек окружений. В директории **ansible/environments** создам две директории для окружений **stage** и **prod**.
 
-2. После как инстансы созданы необходимо создать файл **inventory** где опишу какими хостами будет управлять Ansible
-**inventory**
-```bash
-appserver ansible_host=<xxx.xxx.xxx.xxx> ansible_user=appuser ansible_private_key_file=~/.ssh/some-key
-```
-Проверяем есть ли теперь доступ у Ansible к хостам
-```bash
- ansible appserver -i ./inventory -m ping
-```
-и вот результат
-```bash
-pp-server | SUCCESS => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python3"
-    },
-    "changed": false,
-    "ping": "pong"
-```
-Настораживает строка **"discovered_interpreter_python": "/usr/bin/python3"**, но пока оставлю так.
+### Inventory File
 
-Продолжим...
+Необходимо управлять разными хостами на разных окружениях, соответственно нужен свой инвентори-файл для каждого из окружений. Скопирую инвентори файл **ansible/inventory** в каждую из директорий окружения **environtents/prod** и **environments/stage**.
 
-Создаю файл конфигураций **ansible.cfg** для Ansible
+Теперь, чтобы управлять хостами окружения необходимо явно передавать команде, какой инвентори использовать.
+Например, чтобы задеплоить приложение на **prod** окружении:
+```bash
+ansible-playbook -i environments/prod/inventory.json deploy.yml
+```
+
+Не забываю определить окружение по умолчанию для окружения **stage** в файле **ansible.cfg**
 ```bash
 [defaults]
-inventory = ./inventory
-remote_user = <some-user>
-private_key_file = ~/.ssh/some-key
-host_key_checking = False
-retry_files_enabled = False
-```
-После этого можно удалить лишные данные из файла **inventory**
-
-Используем модуль **command** , который позволяет запускать произвольные команды на удаленном хосте. Выполним команду **uptime** для проверки времени работы инстанса. Команду передадим как аргумент для данного модуля, использовав опцию **-a** :
-
-```bash
-ansible db-server -m command -a uptime
-
-  db-server | CHANGED | rc=0 >>
-  08:46:52 up 13 min,  1 user,  load average: 0.00, 0.00, 0.00
-
-ansible app-server -m command -a uptime
-
-  app-server | CHANGED | rc=0 >>
-  08:47:01 up 11 min,  1 user,  load average: 0.00, 0.07, 0.08
-```
-Далее изменю инвентори файл следующим образом, чтоб создать группу хостов:
-```bash
-[app] # Это название группы
-app-server ansible_host=xxx.xxx.xxx.xxx  # Cписок хостов в данной группе
-
-[db0] # Это название группы
-db-server ansible_host=xxx.xxx.xxx.xxx # Cписок хостов в данной группе
-```
-И теперь мы можно управлять не отдельными хостами, а целыми группами, ссылаясь на имя группы:
-```bash
-ansible app -m ping
-  app-server | SUCCESS => {
-      "ansible_facts": {
-          "discovered_interpreter_python": "/usr/bin/python3"
-      },
-      "changed": false,
-      "ping": "pong"
-  }
-
-ansible db -m ping
-  db-server | SUCCESS => {
-      "ansible_facts": {
-          "discovered_interpreter_python": "/usr/bin/python3"
-      },
-      "changed": false,
-      "ping": "pong"
-  }
-```
-Работает! Но, теперь создам файл **inventory.yml** и перенесу в него записи из имеющегося inventory.
-```bash
-all:
-  children:
-    app:
-      hosts:
-        app-server:
-          ansible_host: xxx.xxx.xxx.xxx
-    db:
-      hosts:
-        db-server:
-          ansible_host: xxx.xxx.xxx.xxx
-```
-И вот результат
-```bash
-ansible all -m ping -i inventory.yml
-  db-server | SUCCESS => {
-      "ansible_facts": {
-          "discovered_interpreter_python": "/usr/bin/python3"
-      },
-      "changed": false,
-      "ping": "pong"
-  }
-  app-server | SUCCESS => {
-      "ansible_facts": {
-          "discovered_interpreter_python": "/usr/bin/python3"
-      },
-      "changed": false,
-      "ping": "pong"
-  }
-```
-Теперь попробую не заходя на хосты, проверить наличие **ruby** в одном, и **mongod** в другом.
-
-```bash
-ansible app -m command -a 'ruby -v'
-  app-server | CHANGED | rc=0 >>
-  ruby 2.3.1p112 (2016-04-26) [x86_64-linux-gnu]
-
-
-ansible app -m command -a 'bundler -v'
-  app-server | CHANGED | rc=0 >>
-  Bundler version 1.11.2
-```
-**ruby** и **bundler** устанволены и работают. Но, используя модуль **command** нет возможности указать запуск сразу комманд **ruby -v** и **bundler -v**
-
-Для этого необхожимо использовать модуль **shell**
-```bash
-ansible app -m shell -a 'ruby -v; bundler -v'
-  app-server | CHANGED | rc=0 >>
-  ruby 2.3.1p112 (2016-04-26) [x86_64-linux-gnu]
-  Bundler version 1.11.2
-```
-Провер. на хосте с БД статус сервиса MongoDB
-```bash
-ansible db -m shell -a 'systemctl status mongod'
-  db-server | CHANGED | rc=0 >>
-  ● mongod.service - High-performance, schema-free document-oriented database
-     Loaded: loaded (/lib/systemd/system/mongod.service; enabled; vendor preset: enabled)
-    Active: active (running) since Fri 2023-05-19 08:34:21 UTC; 4h 17min ago
-```
-Можно выполнить ту же операцию используя модуль **systemd**
-```bash
-ansible db -m systemd -a name=mongod
-```
-или еще лучше с помощью модуля **service** , который более универсален и будет работать и в более старых ОС с init.d-инициализацией
-```bash
-ansible db -m service -a name=mongod
-```
-
-Далее поработаю с PLAYBOOK и запущу YAML файл **clone.yml**
-и следующий результат после заупска:
-```bash
-ansible-playbook clone.yml
-  PLAY [Clone] *********
-
-  TASK [Gathering Facts] ***********
-  ok: [app-server]
-
-  TASK [Clone repo] *************
-  ok: [app-server]
-
-  PLAY RECAP ********************************************************************************************************
-  pp-server                 : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-```
-Проверю что унтри директории **reddit**
-```bash
-ansible app -m shell -a 'ls /home/ubuntu/reddit'
-  app-server | CHANGED | rc=0 >>
-  Capfile
-  Gemfile
-  Gemfile.lock
-  README.md
-  app.rb
-  config
-  config.ru
-  helpers.rb
-  views
-```
-После удалю директорию **reddit**
-```bash
-ansible app -m command -a 'rm -rf ~/reddit'
-  app-server | CHANGED | rc=0 >>
-
-
-ansible app -m shell -a 'ls /home/ubuntu/'
-  app-server | CHANGED | rc=0 >>
-
-```
-Директория **reddit** удалена.
-Запускаю плейбук **clone.yml** снова
-```bash
-ansible-playbook clone.yml
-...
-TASK [Clone repo] ************
-changed: [app-server]
-
-PLAY RECAP *********************************************************************************************************
-app-server                 : ok=2    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-
-
-ansible app -m shell -a 'ls /home/ubuntu/reddit/'
-  app-server | CHANGED | rc=0 >>
-  Capfile
-  Gemfile
-  Gemfile.lock
-  README.md
-  app.rb
-  config
-  config.ru
-  helpers.rb
-  views
-```
-Как видно по результату, после удаления и запуска плейбука повторно указывается что **changed=1** и в тоже время общий результат произведённых действий **ok=2**, что означает нисмотря на удаление директории и запуска плейбка повторно результат получен одинаковый. Таким образом еще раз убедиться можно в том, что идемпотентность сохранилась.
-
----
-
-### Задание со ⭐
-
-Необходимо добиться генерации динамического файла **inventory.json**. После долгих скитаний по интернету решил просто ипользовать уже готовый ресурс Terraform
-```bash
-resource "local_file"
-```
-Данный блок расположил в файле **main.tf** в **stage**
-```bash
-resource "local_file" "app_inventory" {
-  filename = "../../ansible/inventory.json"
-  content  = <<-EOF
-  {
-  "all": {
-    "children": {
-      "app": {
-        "hosts": {
-          "app-server": {
-            "ansible_host": ${module.app.external_ip_address_app}
-          }
-        }
-      },
-      "db": {
-        "hosts": {
-          "db-server": {
-            "ansible_host": ${module.db.external_ip_address_db}
-          }
-        }
-      }
-    }
-  }
-}
-
-EOF
-}
-```
-
-После запуска **terraform apply** проверяем
-```bash
-ansible all -m ping -i inventory.json
-  app-server | SUCCESS => {
-      "ansible_facts": {
-          "discovered_interpreter_python": "/usr/bin/python3"
-      },
-      "changed": false,
-      "ping": "pong"
-  }
-  db-server | SUCCESS => {
-      "ansible_facts": {
-          "discovered_interpreter_python": "/usr/bin/python3"
-      },
-      "changed": false,
-      "ping": "pong"
-  }
-```
-После внёс изменения в файл **ansible.cfg**
-```bash
-[defaults]
-inventory = ./inventory.json
+inventory =  ./environments/stage/inventory.json
 remote_user = ubuntu
 private_key_file = ~/.ssh/appuser
 host_key_checking = False
 retry_files_enabled = False
+nocows = True
 ```
-Тут стоить указать что, в файле **inventory.json** динамическим является только указание IP адресов инстансов, но есть возможность получить еще больше данных из инстанса и указать в файле чтоб полностью добиться динамического свойства.
-
-ВСЁ!!!
 ---
+
+## Переменные групп хостов
+
+Параметризация конфигурации ролей за счет переменных дает возможность изменять настройки конфигурации, задавая нужные значения переменных.
+Ansible позволяет задавать переменные для групп хостов, определенных в инвентори файле.
+
+Директория **group_vars**, созданная в директории плейбука или инвентори файла, позволяет создавать файлы (имена, которых должны соответствовать названиям групп в инвентори файле) для определения переменных для группы хостов.
+Создам директорию **group_vars** в директориях окружений **environments/prod** и **environments/stage**.
+
+### Конфигурация Stage
+
+Зададим настройки окружения stage, используя групповые
+переменные:
+-  Создам файлы **stage/group_vars/app** для определения переменных для группы хостов **app**, описанных в инвентори файле **stage/inventory**
+-  Скопирую в этот файл переменные, определенные в плейбуке **ansible/app.yml**
+-  Надо удалить определение переменных из самого плейбука **ansible/app.yml**
+
+Точно так же можно определить переменные для группы хостов БД на окружении **stage**:
+-  Создам файл **stage/group_vars/db** и скопирую в него содержимое переменные из плейбука **ansible/db.yml**
+-  Секцию определения переменных из самого плейбука **ansible/db.yml** надо удалить.
+
+Далее надо создать файл с переменными для группы **stage/group_vars/all** с содержимым **env: stage**. Таким образом переменные в этом файле будут доступны всем хостам окружения.
+
+### Конфигурация Prod
+
+Конфигурация окружения **prod** будет идентичной, за исключением переменной **env: prod**, определенной для группы **all**.
+
+---
+### Вывод информации об окружении
+
+Для хостов из каждого окружения указал переменную **env**, которая содержит название окружения. Теперь надо настроить вывод информации об окружении, при применении плейбуков. Надо указать переменную **env** по умолчанию в используемых ролях. Для этого редактирую файл **defaults/main.yml** в каждом из окружений.
+
+```bash
+---
+# defaults file for app
+db_host: 127.0.0.1
+env: local
+```
+```bash
+---
+# defaults file for db
+mongo_port: 27017
+mongo_bind_ip: 127.0.0.1
+env: local
+```
+Теперь создам таск с помощью модуля **debug** для вывода информации о том, в каком окружении находится конфигурируемый хост.
+файл **ansible/roles/app/tasks/main.yml**
+```bash
+# tasks file for app
+- name: Show info about the env this host belongs to
+  debug:
+    msg: "This host is in {{ env }} environment!!!"
+```
+
+файл **ansible/roles/db/tasks/main.yml**
+```bash
+# tasks file for db
+- name: Show info about the env this host belongs to
+  debug:
+    msg: "This host is in {{ env }} environment!!!"
+```
+Теперь пора наводить порядок в директории **ansible**.
+Перенесу все плейбуки в отдельную директорию согласно **best practices**
+В директорию **ansible/playbooks** перенесем все плейбуки. А в директорию **ansible/old** перенесу се, что не относится к текущей конфигурации.
+
+Заодно можно улучшить **ansible.cfg**
+```bash
+[defaults]
+inventory =  ./environments/stage/inventory.json
+remote_user = ubuntu
+private_key_file = ~/.ssh/appuser
+
+# Отключим проверку SSH Host-keys (поскольку они всегда разные для новых инстансов)
+host_key_checking = False
+
+# Отключим создание *.retry-файлов (они нечасто нужны, но мешаются под руками)
+retry_files_enabled = False
+
+# Явно укажем расположение ролей (можно задать несколько путей через ; )
+roles_path = ./roles
+nocows = True
+
+[diff]
+# Включим обязательный вывод diff при наличии изменений и вывод 5 строк контекста
+always = True
+context = 5
+```
+Перед проверкой пересоздам инстансы.
+
+```bash
+ansible-playbook playbooks/site.yml --check
+ansible-playbook playbooks/site.yml
+```
+Результат
+```bash
+PLAY RECAP ********************************************************************************************************
+app-server                 : ok=12   changed=9    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+db-server                  : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+
+### Проверка Prod окружения
+
+Для проверки настройки **prod** окружения сначала надо удалить инфраструктуру окружения **stage**. Пересоздать инстансы и затем поднять инфраструктуру для **prod** окружения.
+
+```bash
+ansible-playbook -i environments/prod/inventory.json playbooks/site.yml --check
+ansible-playbook -i environments/prod/inventory.json playbooks/site.yml
+```
+
+---
+
+## Работа с Community-ролями
+
+ Буду раотать с порталом **Ansible Galaxy** и с помощью утилиты **ansible-galaxy** и файла **requirements.yml**, но этот файл **requirements.yml** будет отдельным для каждого окружения.
+ Хорошей практикой является разделение зависимостей ролей **requirements.yml** по окружениям.
+
+А из **Ansible Galaxy** использую роль **jdauphant.nginx** дл настройки обратного проксирования для приложения с помощью **nginx**.
+
+- Создам файлы **environments/stage/requirements.yml** и **environments/prod/requirements.yml**
+- Добавля в них запись вида:
+```bash
+- src: jdauphant.nginx
+  version: v2.21.1
+```
+- Установлю роль:
+```bash
+ansible-galaxy install -r environments/stage/requirements.yml
+```
+
+- Надо учесть, что комьюнити-роли не стоит коммитить в репозиторий, для этого добавлю в **.gitignore** запись: **jdauphant.nginx**
+
+Для минимальной настройки проксирования необходимо добавить следующие переменные:
+```bash
+nginx_sites:
+default:
+- listen 80
+- server_name "reddit"
+- location / {
+    proxy_pass http://127.0.0.1:порт_приложения(9292);
+}
+```
+Переменные добавлю в **stage/group_vars/app** и **prod/group_vars/app**
+
+```bash
+db_host: 192.168.10.23
+nginx_sites:
+  default:
+    - listen 80
+    - server_name "reddit"
+    - location / { proxy_pass http://127.0.0.1:9292; }
+```
+---
+
+## Самостоятельное задание
+
+- **Добавьте в конфигурацию Terraform открытие 80 порта для инстанса приложения**
+
+Для релизации этой задачи необходимо будет создать **security group**, что позволит управлять трафиком.
+Возвращаюсь в прошлое и добиваюсь от модуля **vpc** того, чтоб он "выплюнул мне **id** сети над которым и будем управлять создаваемыё **security group**
+Для этого изменения добавлюя в файл **terraform/modules/vpc/outpit.tf**
+```bash
+output "app-network" {
+  value = yandex_vpc_network.app-network.id
+}
+```
+Далее создаю **security group** уже в файле **terraform/stage/main.tf** где обращаюсь к данным **app-network**, которые выплюнул модуль **vpc**
+```bash
+resource "yandex_vpc_security_group" "web-server" {
+  name        = "HTTPD security group"
+  description = "Security group to route the trafic into web server"
+  network_id  = module.vpc.app-network
+
+  ingress {
+    protocol       = "TCP"
+    description    = "HTTP trafic"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 80
+  }
+
+  ingress {
+    protocol       = "TCP"
+    description    = "SSH trafic"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 22
+  }
+
+  egress {
+    protocol       = "ANY"
+    description    = "Allow any outoing traffic"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    from_port      = -1
+    to_port        = -1
+  }
+}
+```
+
+- Добавьте вызов роли **jdauphant.nginx** в плейбук **app.yml**
+```bash
+  roles:
+    - app
+    - jdauphant.nginx
+```
+
+- Примените плейбук site.yml для окружения stage и проверьте, что приложение теперь доступно на 80 порту
+  РАБОТАЕТ!!!
+
+  ---
+  ## Работа с Ansible Vault
+
+Надо подготовимть плейбук для создания пользователей, пароль пользователей будет храниться в зашифрованном виде в файле **credentials.yml**:
+
+- Создаётся файл **~/.ansible/vault.key** со произвольной строкой ключа
+- Редактирую файл **ansible.cfg**, добавлю опцию
+```bash
+[defaults]
+...
+vault_password_file = ~/.ansible/vault.key
+```
+Обязательно добавьте в **.gitignore** файл **vault.key**
+
+Файл **ansible/playbooks/users.yml** для создания пользователей:
+```bash
+---
+- name: Create users
+  hosts: all
+  become: true
+
+  vars_files:
+    - "{{ inventory_dir }}/credentials.yml"
+
+  tasks:
+    - name: create users
+      user:
+        name: "{{ item.key }}"
+        password: "{{ item.value.password|password_hash('sha512', 65534|random(seed=inventory_hostname)|string) }}"
+        groups: "{{ item.value.groups | default(omit) }}"
+      with_dict: "{{ credentials.users }}"
+```
+
+Создадю файл с данными пользователей для каждого окружения
+
+Файл для **prod** (ansible/environments/prod/credentials.yml):
+```bash
+# prod
+credentials:
+  users:
+    admin:
+      password: some-pass
+      groups: sudo
+```
+
+Файл для **stage** (ansible/environments/stage/credentials.yml):
+```bash
+# stage
+credentials:
+  users:
+    admin:
+      password: some-pass
+      groups: sudo
+    qauser:
+      password: some-pass
+```
+
+Запускаю шифрование файлов используя **vault.key** (используем одинаковый для всех окружений):
+```bash
+ansible-vault encrypt environments/prod/credentials.yml
+ansible-vault encrypt environments/stage/credentials.yml
+```
+Теперь добавлю вызов плейбука в файл **site.yml** и запущу его для **stage** окружения:
+```bash
+---
+- import_playbook: db.yml
+- import_playbook: app.yml
+- import_playbook: deploy.yml
+- import_playbook: users.yml
+```
+Результат:
+```bash
+ssh ubuntu@158.160.61.59
+Welcome to Ubuntu 16.04.7 LTS (GNU/Linux 4.4.0-142-generic x86_64)
+
+ubuntu@reddit-app:~$ cat /etc/passwd
+...
+ubuntu:x:1000:1001:Ubuntu:/home/ubuntu:/bin/bash
+admin:x:1001:1002::/home/admin:
+qauser:x:1002:1003::/home/qauser:
+```
+
+---
+
+## Задание с ⭐⭐: Настройка TravisCI
+
+**.travis.yml** файл создан, но проверить его не получилось.
+есть вот это решение https://stackoverflow.com/questions/21053657/how-to-run-travis-ci-locally
+Но, использовать его, наверное, придётся уже в следующих ДЗ.
+
+А пока ВСЁ!!!
