@@ -1,6 +1,6 @@
 # File name /modules/vpc/main.tf
 
-/*
+
 terraform {
   required_providers {
     yandex = {
@@ -9,7 +9,7 @@ terraform {
     }
   }
 }
-*/
+
 
 resource "yandex_vpc_network" "app-network" {
   name = "app-network"
