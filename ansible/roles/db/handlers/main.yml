@@ -2,3 +2,4 @@
 # handlers file for db
 - name: restart mongod
   service: name=mongod state=restarted
+# action: service name=mongod state=restarted enabled=yes

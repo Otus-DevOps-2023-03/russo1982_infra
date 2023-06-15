@@ -4,7 +4,7 @@
   become: true
 
   vars_files:
-    - "{{ inventory_dir }}/credentials.yml"
+    - "/home/russo/git/russo1982_infra/ansible/environments/stage/credentials.yml"
 
   tasks:
     - name: create users
