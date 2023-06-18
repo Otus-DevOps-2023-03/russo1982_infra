@@ -509,4 +509,250 @@ vagrant reload --provision
 ## Тестирование роли: Установка зависимостей
 
 Для проведения тестирования необходимо установить **Molecule**, **Ansible**, **Testinfra** на локальную машину используя **pip**.  Установку данных модулей буду выполнять в созданной через **virtualenv** среде работы с питоном.
-Можно было воспользоваться **Pipenv**, но учитывая то, что материалы ДЗ устаревшие года на 4 минимум, решил отказаться от **Pipenv** и использовать **virtualenv**.
+Можно было воспользоваться **pipenv**, но учитывая то, что материалы ДЗ устаревшие года на 4 минимум, решил отказаться от **pipenv** и использовать **virtualenv**. Полезная ссылка [https://docs.python-guide.org/dev/virtualenvs/]
+Установка **virtualenv**
+```bash
+pip install virtualenv
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: virtualenv in ~/.local/lib/python3.10/site-packages (20.23.0)
+Requirement already satisfied: distlib<1,>=0.3.6 in ~/.local/lib/python3.10/site-packages (from virtualenv) (0.3.6)
+Requirement already satisfied: filelock<4,>=3.11 in ~/.local/lib/python3.10/site-packages (from virtualenv) (3.12.1)
+Requirement already satisfied: platformdirs<4,>=3.2 in ~/.local/lib/python3.10/site-packages (from virtualenv) (3.5.3)
+```
+```bash
+virtualenv --version
+virtualenv 20.23.0 from ~/.local/lib/python3.10/site-packages/virtualenv/__init__.py
+```
+Далее, находясь в директории **ansible** создаю директорию для **virtualenv** под название **venv**, которое уже указано в **.gitignore**
+```bash
+virtualenv venv
+created virtual environment CPython3.10.6.final.0-64 in 93ms
+  creator CPython3Posix(dest=~/git/russo1982_infra/ansible/venv, clear=False, no_vcs_ignore=False, global=False)
+  seeder FromAppData(download=False, pip=bundle, setuptools=bundle, wheel=bundle, via=copy, app_data_dir=~/.local/share/virtualenv)
+    added seed packages: pip==23.1.2, setuptools==67.8.0, wheel==0.40.0
+  activators BashActivator,CShellActivator,FishActivator,NushellActivator,PowerShellActivator,PythonActivator
+```
+что дальше? Вот выдержка из "Полезной ссылки"
+```bash
+To begin using the virtual environment, it needs to be activated:
+
+$ source venv/bin/activate
+
+The name of the current virtual environment will now appear on the left of the prompt (e.g. (venv)Your-Computer:project_folder UserName$) to let you know that it’s active. From now on, any package that you install using pip will be placed in the venv folder, isolated from the global Python installation.
+```
+Для начало установки **Molecule**, **Ansible**, **Testinfra** на локальную машину используя **pip**. Но для этого надо активировать **venv**
+```bash
+ls -l venv/bin/activate
+-rw-rw-r-- 1 russo russo 2163 июн 18 12:38 venv/bin/activate
+```
+```bash
+source venv/bin/activate
+(venv) ➜  ansible git:(ansible-4) ✗
+```
+Перед началом установки модулей добавлю следующие записи в файл **requirements.txt** в директории **ansible**:
+```bash
+ansible>=2.4
+molecule>=2.6
+testinfra>=1.10
+python-vagrant>=0.5.15
+```
+и запускаю **pip install -r requirements.txt**
+После проверяю устновленные модули:
+```bash
+molecule --version
+molecule 5.0.1 using python 3.10
+    ansible:2.15.0
+    delegated:5.0.1 from molecule
+```
+```bash
+ansible --version
+ansible 2.10.8
+  config file = ~/git/russo1982_infra/ansible/ansible.cfg
+  configured module search path = ['~/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python3/dist-packages/ansible
+  executable location = /usr/bin/ansible
+  python version = 3.10.6 (main, May 29 2023, 11:10:38) [GCC 11.3.0]
+```
+
+### Тестирование db роли
+
+Командой **molecule init** создаю заготовки тестов для роли **db**. Данную команду необходимо запускать в директории с ролью **ansible/roles/db**
+```bash
+molecule init scenario --role-name db --driver-name vagrant
+
+Error: Invalid value for '--driver-name' / '-d': 'vagrant' is not 'delegated'.
+```
+Для исправления ошибки устанавливаю модуль **molecule-vagrant**
+```bash
+pip install molecule-vagrant
+
+Installing collected packages: distro, selinux, molecule-vagrant
+Successfully installed distro-1.8.0 molecule-vagrant-2.0.0 selinux-0.3.0
+```
+И результат команды
+```bash
+molecule init scenario --role-name db --driver-name vagrant --verifier-name testinfra
+
+INFO     Initializing new scenario default...
+INFO     Initialized scenario in ~/git/russo1982_infra/ansible/roles/db/molecule/default successfully.
+```
+
+После добавляю несколько тестов, используя модули **Testinfra** для проверки конфигурации, настраиваемой ролью **db**
+**db/molecule/default/tests/test_default.py**
+```bash
+"""Role testing files using testinfra."""
+
+import os
+
+import testinfra.utils.ansible_runner
+
+
+testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
+    os.environ['MOLECULE_INVENTORY_FILE']).get_hosts('all')
+
+def test_hosts_file(host):
+    """Validate /etc/hosts file."""
+    f = host.file("/etc/hosts")
+
+    assert f.exists
+    assert f.user == "root"
+    assert f.group == "root"
+
+# check if MongoDB is enabled and running
+def test_mongo_running_and_enabled(host):
+    mongo = host.service("mongod")
+    assert mongo.is_running
+    assert mongo.is_enabled
+
+# check if configuration file contains the required line
+def test_config_file(host):
+    config_file = host.file('/etc/mongod.conf')
+    assert config_file.contains('bindIp: 0.0.0.0')
+    assert config_file.is_file
+```
+### Создание тестовой машины
+
+Описание тестовой машины, которая создается **Molecule** для тестов содержится в файле **db/molecule/default/molecule.yml**
+
+```bash
+---
+dependency:
+  name: galaxy
+driver:
+  name: vagrant
+  provider:
+    name: virtualbox
+lint: yamllint
+platforms:
+  - name: instance
+    box: ubuntu/xenial64
+provisioner:
+  name: ansible
+  lint: ansible-lint
+verifier:
+  name: testinfra
+```
+
+Далее в директории **ansible/roles/db** запускаю команду для создания VM
+```bash
+molecule create
+```
+Но, и снова ошибка
+```bash
+ERROR    Computed fully qualified role name of db does not follow current galaxy requirements.
+Please edit meta/main.yml and assure we can correctly determine full role name:
+
+galaxy_info:
+role_name: my_name  # if absent directory name hosting role is used instead
+namespace: my_galaxy_namespace  # if absent, author is used instead
+```
+Вношу корректировки в файл **meta/main.yml**
+```bash
+galaxy_info:
+  author: russo
+  description: role db used in molecule test
+  company: your company (optional)
+  role_name: db
+  namespace: russo
+```
+И вот результат. Это список созданных инстансов, которыми управляет **Molecule**
+```bash
+molecule list
+
+  Instance Name │ Driver Name │ Provisioner Name │ Scenario Name │ Created │ Converged
+╶───────────────┼─────────────┼──────────────────┼───────────────┼─────────┼───────────╴
+  instance      │ vagrant     │ ansible          │ default       │ true    │ false
+```
+При необходимости дебага подключиться по SSH внутрь VM
+```bash
+molecule login -h instance
+
+Last login: Sun Jun 18 18:14:21 2023 from 10.0.2.2
+vagrant@instance:~$
+```
+
+### playbook.yml
+
+В описании ДЗ указано, что **molecule init** генерирует плейбук для применения нашей роли. Данный плейбук можно посмотреть по пути **db/molecule/default/playbook.yml**.
+
+Снова напомню, что из-за того, то материалы ДЗ устарели лет на четыри у меня файл **playbook.yml** не был создан. Вместо данного файла уже используется файл **converge.yml** в которую просто надо добавить строку **become: true**
+
+**db/molecule/default/converge.yml**
+```bash
+---
+- name: Converge
+  hosts: all
+  become: true
+  vars:
+    mongo_bind_ip: 0.0.0.0
+  tasks:
+    - name: "Include db"
+      ansible.builtin.include_role:
+        name: "db"
+```
+Зпускаю **converge.yml**
+```bash
+molecule converge
+
+PLAY RECAP *********************************************************************
+instance                   : ok=9    changed=7    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+Перед запуском тестов проверю настройки **mongod** в созданном инстансе
+```bash
+molecule login -h instance
+
+vagrant@instance:~$ cat /etc/mongod.conf
+...
+
+# network interfaces
+net:
+  port: 27017 # default - один из фильтров Jinja2, он задает значение по умолчанию, если переменная слева не определена
+  bindIp: 0.0.0.0
+```
+```bash
+vagrant@instance:~$ sudo systemctl status mongod
+● mongod.service - High-performance, schema-free document-oriented database
+   Loaded: loaded (/lib/systemd/system/mongod.service; enabled; vendor preset: enabled)
+   Active: active (running) since Sun 2023-06-18 19:52:10 UTC; 13s ago
+```
+
+Теперь можно запустить тест **ansible/molecule/defaults/tests/test_default.py**
+
+```bash
+molecule verify
+
+============================= test session starts ==============================
+platform linux -- Python 3.10.6, pytest-7.3.2, pluggy-1.0.0
+rootdir: /home/russo
+plugins: testinfra-8.1.0, testinfra-6.0.0
+collected 3 items
+
+molecule/default/tests/test_default.py ...                               [100%]
+
+============================== 3 passed in 2.73s ===============================
+INFO     Verifier completed successfully.
+```
+
+---
+
+## Самостоятельно
