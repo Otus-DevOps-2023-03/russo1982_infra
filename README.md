@@ -756,3 +756,71 @@ INFO     Verifier completed successfully.
 ---
 
 ## Самостоятельно
+
+- Напишите тест к роли **db** для проверки того, что БД слушает по нужному порту (27017)
+
+Для создание теста добавляю следующие строки в файл **molecule/default/tests/test_default.py**
+```bash
+...
+# check if mongod listening port 27017
+def test_mongo_port(host):
+    mongo_addr = host.socket('tcp://27017')
+    assert mongo_addr.is_listening
+```
+
+- Используйте роли **db** и **app** в плейбуках **packer_db.yml** и **packer_app.yml** и убедитесь, что все работает как прежде (используйте теги для запуска только нужных тасков, теги указываются в шаблоне пакера*).
+
+Просто приведу тут какие изменения применил в файлах
+
+**packer_app.yml**
+```bash
+---
+- name: Install Ruby && Bundler
+  hosts: app
+  become: true
+
+  roles:
+    - app
+```
+
+**packer_db.yml**
+```bash
+---
+- name: Install MongoDB on Packer image
+  hosts: db
+  become: true
+
+  roles:
+    - db
+```
+ЗАМУСАЛ МЕНЯ **PACKER VERSION 1.9.1**. ОН БОЛЕЕ НЕ ХОЧЕТ РАБОТАТЬ С ФОРМАТОМ **JASON** И ТРЕБУЕТ **HCL** ФОРМАТ ФАЙЛОВ КОНФИГУРАЦИИ.
+ПОЭТОМУ, УБИВ 12 ЧАСОВ НА ПОНИМАНИЕ ЭТОЙ ПРИХОТИ **PACKER** УТСНОВИЛ ВЕРСИЮ **PACKER VERSION 1.8.6**
+
+Итак, после запуска **packer build -var-file=variables.json db.json** да вышла ошибка что роли не находит.
+
+решение данной ошибки - это указать в шаблоне **Packer** следующую строку
+
+**packer/app.json(db.json)**
+```bash
+ "provisioners": [
+        {
+            "type": "ansible",
+            "playbook_file": "../ansible/playbooks/packer_db.yml",
+            "ansible_env_vars": ["ANSIBLE_ROLES_PATH={{ pwd }}/../ansible/roles"]
+        }
+    ]
+
+ "provisioners": [
+        {
+            "type": "ansible",
+            "playbook_file": "../ansible/playbooks/packer_app.yml",
+            "extra_arguments": ["--tags", "install"],
+            "ansible_env_vars": ["ANSIBLE_ROLES_PATH={{ pwd }}/../ansible/roles"]
+        }
+    ]
+```
+В итоге образы созданы!!!
+
+---
+
+## Задание со *
