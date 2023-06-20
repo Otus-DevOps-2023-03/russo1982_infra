@@ -824,3 +824,93 @@ def test_mongo_port(host):
 ---
 
 ## Задание со *
+
+- Вынести роль **db** в отдельный репозиторий: удалить роль из репозитория **infra** и сделать подключение роли через **requirements.yml** обоих окружений; [https://blog.ruanbekker.com/blog/2022/04/19/publish-and-use-your-ansible-role-from-git/]
+
+Шаги реализации будут таковыми:
+1. Иду в GitHUB и создаю там новый репо **my-ans-roles**. И пока будет там только одна основная ветка. Если смогу улучшить роли. то создам другую ветку с новой версией ролей.
+
+2. Далее **git pull** ветки **my-ans-roles** на локалку и копирую туда роль **db**. После этого **git push** и можно удалить роль **db** из репо **infra**
+
+3. Теперь надо сделать *install the Ansible Role from Git* но важно знать, что *when installing roles, ansible installs them by default under:*
+   - *~/.ansible/roles,*
+   - */usr/share/ansible/roles* or
+   - */etc/ansible/roles*
+
+4. Необходимо добавить адрес роли в GitHUB в файле **requirements.yml**.
+
+
+Колнирую новый репо **my-ans-roles** себе на локалку
+```bash
+git clone git@github.com:russo1982/my-ans-roles.git
+```
+Далее копирую директорию **ansible/roles** в директорию **my-ans-roles**
+```bash
+cp -rv ansible/roles ../my-ans-roles
+git push
+```
+Итак все нужные роли уже бороздят просторы GitHUB.
+
+Осталось создать файл **ansible/roles/requirements.yml**
+```bash
+---
+# from GitHub, overriding the name and specifying a specific tag
+roles:
+  - name: db
+    src: git@github.com:russo1982/my-ans-roles.git
+    version: main
+    scm: git
+```
+
+Имеющуюся директорию **roles/db** переименую на **roles/.db** и добавлю в **.gitignore**
+Далее запускаю команду, из GitHUB скачать и установить роль **db**
+```bash
+ansible-galaxy install -r requirements.yml
+Starting galaxy role install process
+- extracting db to /home/russo/.ansible/roles/db
+- db (main) was installed successfully
+```
+
+Для тестов скопирую директорию **molecule** в директорию **ansible** и запускаю инстанс через **molecule create** **molecule converge** **molecule verify** и читаю логи
+```bash
+INFO     Performing prerun with role_name_check=0...
+INFO     Running ansible-galaxy role install -vr roles/requirements.yml --roles-path /home/russo/.cache/ansible-compat/0cb87f/roles
+INFO     Set ANSIBLE_ROLES_PATH=/home/russo/.cache/ansible-compat/0cb87f/roles:roles:/home/russo/git/russo1982_infra/ansible/roles/app:/home/russo/.ansible/roles/db:/home/russo/git/russo1982_infra/ansible/roles/jdauphant.nginx
+```
+еще подтверждение того, что используется роль из **~/.ansible/roles**
+```bash
+pwd
+/home/russo/.cache/ansible-compat
+
+tree
+.
+└── 0cb87f
+    ├── collections
+    ├── modules
+    └── roles
+        └── db
+            ├── db
+            │   ├── LICENSE
+            │   ├── README.md
+            │   └── roles
+            │       ├── app
+            │       │   ├── defaults
+            │       │   │   └── main.yml
+            │       │   ├── handlers
+            │       │   │   └── main.yml
+            │       │   ├── meta
+            │       │   │   └── main.yml
+            │       │   ├── README.md
+            │       │   ├── tasks
+            │       │   │   ├── main.yml
+            │       │   │   ├── puma.yml
+            │       │   │   └── ruby.yml
+            │       │   ├── templates
+            │       │   │   ├── db_config.j2
+            │       │   │   └── puma_service.j2
+            │       │   ├── tests
+            │       │   │   ├── inventory
+            │       │   │   └── test.yml
+            │       │   └── vars
+            │       │       └── main.yml
+```

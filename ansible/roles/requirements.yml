@@ -1,0 +1,7 @@
+---
+# from GitHub, overriding the name and specifying a specific tag
+roles:
+  - name: db
+    src: git@github.com:russo1982/my-ans-roles.git
+    version: main
+    scm: git
