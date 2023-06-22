@@ -1,5 +1,5 @@
-cloud_id         = "b1gnk09dv6udscsdv"
-folder_id        = "b1ghj2aqsdvsdvsdv"
+cloud_id         = "qsf"
+folder_id        = "acav"
 region_id        = "ru-central1"
 zone             = "ru-central1-a"
 image_id         = "fd8h9ujjqsdvsdvsdv" # Image ID of default "reddit-base-1682885935"

@@ -1,0 +1,30 @@
+---
+#- name: Pause for 1 minutes befor installing ruby set
+#  ansible.builtin.pause:
+#    minutes: 1
+
+- name: "apt-get update"
+  apt: update_cache=yes
+  tags: install
+
+- name: Install ruby-full
+  apt: "name=ruby-full state=present"
+  tags: install
+
+#- name: Pause for 1 minutes befor installing ruby-bundler
+#  ansible.builtin.pause:
+#    minutes: 1
+
+- name: Install ruby-bundler
+#  gem: name=bundler state=latest
+  ignore_errors: yes
+  apt: "name=ruby-bundler state=present"
+  tags: install
+
+#- name: Pause for 1 minutes befor installing build-essential
+#  ansible.builtin.pause:
+#    minutes: 1
+
+- name: Install build-essential
+  apt: "name=build-essential state=present"
+  tags: install

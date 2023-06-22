@@ -1,0 +1,29 @@
+---
+- name: Deploy App
+  hosts: app
+  # tags: deploy-tag
+  become: true
+  tasks:
+    - name: Install git
+      apt:
+        name: git
+        state: present
+        update_cache: yes
+
+    - name: Fetch the latest version of application code
+      git:
+        repo: "https://github.com/express42/reddit.git"
+        dest: "/home/{{ deploy_user }}/reddit"
+        version: monolith
+      notify: restart puma
+
+    - name: bundle install
+      become: false
+      bundler:
+        state: present
+        chdir: "/home/{{ deploy_user }}/reddit"
+
+  handlers:
+    - name: restart puma
+      become: true
+      systemd: name=puma state=restarted

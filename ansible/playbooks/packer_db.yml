@@ -1,0 +1,32 @@
+---
+- name: Install MongoDB on Packer image
+  hosts: db
+  become: true
+
+  roles:
+    - db
+
+#  tasks:
+#    - name: Import the public key used by the package management system
+#      apt_key:
+#        keyserver: hkp://keyserver.ubuntu.com:80
+#        id: d68fa50fea312927
+#
+#    - name: Add MongoDB repository
+#      apt_repository:
+#        repo: "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse"
+#        state: present
+#
+#    - name: "apt-get update"
+#      apt: update_cache=yes
+#
+#    - name: install Mongodb-3.2
+#      apt:
+#        name: mongodb-org
+#        state: present
+#
+#    - name: Configure service supervisor
+#      systemd:
+#        name: mongod
+#        enabled: yes
+#

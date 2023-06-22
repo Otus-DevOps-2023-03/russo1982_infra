@@ -37,11 +37,11 @@ variable "instances" {
 }
 variable "app_disk_image" {
   description = "Disk image for reddit app"
-  default     = "fd82dkbbdpdktah8ega7" # image created by Packer with installed Ruby named reddit-base-ruby-1683553352
+  default     = "fd8nq8ekekn3nu4uspet" # image created by Packer with installed Ruby named "reddit-ruby-1685274414"
 }
 variable "db_disk_image" {
   description = "Disk image for reddit db"
-  default     = "fd8t80ruels55tjlmf65" # image created by Packer with installed MongoDB named "reddit-base-mdb-1683552819"
+  default     = "fd8mg91kqm1cvafurehd" # image created by Packer with installed MongoDB named "reddit-mongodb-1685268210"
 }
 
 /*

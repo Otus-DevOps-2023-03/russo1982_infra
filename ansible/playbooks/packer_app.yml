@@ -1,0 +1,29 @@
+---
+- name: Install Ruby && Bundler
+  hosts: app
+  become: true
+
+  roles:
+    - app
+
+#  tasks:
+#    - name: Pause for 1 minutes befor installing ruby set
+#      ansible.builtin.pause:
+#        minutes: 1
+#    # Установим в цикле все зависимости
+#    - name: Install ruby-full
+#      apt: "name=ruby-full state=present"
+#
+#    - name: Pause for 1 minutes befor installing ruby-bundler
+#      ansible.builtin.pause:
+#        minutes: 1
+#
+#    - name: Install ruby-bundler
+#      apt: "name=ruby-bundler state=present"
+#
+#    - name: Pause for 1 minutes befor installing build-essential
+#      ansible.builtin.pause:
+#        minutes: 1
+#
+#    - name: Install build-essential
+#      apt: "name=build-essential state=present"
