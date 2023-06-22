@@ -1,7 +1,7 @@
 # File name /modules/app/main.tf
 # copied from db.tf
 
-
+/*
 terraform {
   required_providers {
     yandex = {
@@ -10,7 +10,7 @@ terraform {
     }
   }
 }
-
+*/
 
 resource "yandex_compute_instance" "app" {
   ##count    = var.instances

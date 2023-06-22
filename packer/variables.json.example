@@ -1,11 +1,11 @@
 {
     "cloud_type": "yandex",
     "key": "image-puller_srv-accnt_key.json",
-    "folder_id": "b1ghj2aqa2mlhsqvhmpe",
+    "folder_id": "abc",
     "src_img_id": "fd8euj6lnuj728jk1o7q",
     "src_img_fam": "ubuntu-xenial",
     "ssh_usr": "ubuntu",
-    "ssh_key": "/home/std/.ssh/appuser.pub",
+    "ssh_key": "~/.ssh/appuser.pub",
     "image_name": "reddit-full",
     "subnet_id": "e9bmf16e0jnfihhpo1bm",
     "zone1": "ru-central1-a",
